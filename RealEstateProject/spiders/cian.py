@@ -10,8 +10,6 @@ from scrapy.exceptions import CloseSpider
 from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 
-driver = uc.Chrome(headless=True, use_subprocess=False)
-
 
 class CianSpider(Spider):
     name = 'cian'
@@ -27,6 +25,12 @@ class CianSpider(Spider):
     current_url = "https://kazan.cian.ru/cat.php?deal_type=sale&engine_version=2&offer_type=flat&p=1&region=4777&room1=1"
 
     prev_page_number = 0
+
+    options = uc.ChromeOptions()
+    options.add_argument("--headless")
+    options.add_argument("proxy-server=145.239.85.58:9300")
+    driver = uc.Chrome(options=options)
+    # driver = uc.Chrome(browser_executable_path="../chromedriver", options=options)
 
     def parse(self, response):
         try:
@@ -45,8 +49,8 @@ class CianSpider(Spider):
 
         original_response = response
 
-        driver.get(response.url)
-        response = Selector(text=driver.page_source)
+        self.driver.get(response.url)
+        response = Selector(text=self.driver.page_source)
 
         # Проверяем наличие на странице контейнера с доп предложениями (появляется на последней странице)
         additional_block = response.xpath('//div[@data-name="Suggestions"]')
@@ -96,14 +100,14 @@ class CianSpider(Spider):
         :return:
         """
         # Открываем текущую страницу (страницу, на которой обнаружен контейнер с доп предложениями)
-        driver.get(self.current_url)
+        self.driver.get(self.current_url)
 
         # Ждем загрузки страницы
         time.sleep(5)
 
         # На странице вероятно появление плашки о принятии файлов куки => принимаем
         try:
-            accept_cookies_button = driver.find_element(By.XPATH, "//div[@data-name='CookiesNotification']"
+            accept_cookies_button = self.driver.find_element(By.XPATH, "//div[@data-name='CookiesNotification']"
                                                                   "//div[@class='_25d45facb5--button--CaFmg']")
             accept_cookies_button.click()
             time.sleep(2)
@@ -112,14 +116,14 @@ class CianSpider(Spider):
 
         while True:
             try:
-                more_button = driver.find_element(By.CLASS_NAME, '_93444fe79c--moreSuggestionsButtonContainer--h0z5t')
+                more_button = self.driver.find_element(By.CLASS_NAME, '_93444fe79c--moreSuggestionsButtonContainer--h0z5t')
                 more_button.click()
                 time.sleep(5)
             except:
                 break
 
         # Обновляем содержимое ответа Scrapy
-        body = driver.page_source
-        url = driver.current_url
+        body = self.driver.page_source
+        url = self.driver.current_url
         response = HtmlResponse(url=url, body=body, encoding='utf-8')
         return response
