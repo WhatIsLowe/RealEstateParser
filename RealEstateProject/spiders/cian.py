@@ -1,3 +1,4 @@
+import logging
 import time
 import undetected_chromedriver as uc
 from ..items import CianItem
@@ -10,13 +11,14 @@ from scrapy.exceptions import CloseSpider
 from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 
+logging.basicConfig(level=logging.WARNING)
 
 class CianSpider(Spider):
     name = 'cian'
-    custom_settings = {
-        'FEED_FORMAT': 'json',
-        'FEED_URI': 'cian.json'
-    }
+    # custom_settings = {
+    #     'FEED_FORMAT': 'json',
+    #     'FEED_URI': 'cian.json'
+    # }
 
     start_urls = [
         "https://kazan.cian.ru/cat.php?deal_type=sale&engine_version=2&offer_type=flat&p=1&region=4777&room1=1"
@@ -28,15 +30,17 @@ class CianSpider(Spider):
 
     options = uc.ChromeOptions()
     options.add_argument("--headless")
-    options.add_argument("proxy-server=145.239.85.58:9300")
+    options.add_argument("--disable-dev-shm-usage")
+    # options.add_argument("proxy-server=145.239.85.58:9300")
     driver = uc.Chrome(options=options)
+
     # driver = uc.Chrome(browser_executable_path="../chromedriver", options=options)
 
     def parse(self, response):
         try:
             # Получаем номер текущей страницы
             page_number = int(response.url.split('&p=')[1].split('&')[0])
-            print(f'------------------------{page_number}------------------------')
+            self.logger.warn(f"Обрабатываю страницу №{page_number}")
         except IndexError:
             # Если номер страницы в адресе не найден => присваиваем 1
             page_number = 1
@@ -108,7 +112,7 @@ class CianSpider(Spider):
         # На странице вероятно появление плашки о принятии файлов куки => принимаем
         try:
             accept_cookies_button = self.driver.find_element(By.XPATH, "//div[@data-name='CookiesNotification']"
-                                                                  "//div[@class='_25d45facb5--button--CaFmg']")
+                                                                       "//div[@class='_25d45facb5--button--CaFmg']")
             accept_cookies_button.click()
             time.sleep(2)
         except NoSuchElementException:
@@ -116,7 +120,8 @@ class CianSpider(Spider):
 
         while True:
             try:
-                more_button = self.driver.find_element(By.CLASS_NAME, '_93444fe79c--moreSuggestionsButtonContainer--h0z5t')
+                more_button = self.driver.find_element(By.CLASS_NAME,
+                                                       '_93444fe79c--moreSuggestionsButtonContainer--h0z5t')
                 more_button.click()
                 time.sleep(5)
             except:
@@ -127,3 +132,7 @@ class CianSpider(Spider):
         url = self.driver.current_url
         response = HtmlResponse(url=url, body=body, encoding='utf-8')
         return response
+
+    def closed(self, reason):
+        self.driver.quit()
+        logging.info(msg="Работа завершена")
