@@ -31,16 +31,27 @@ class CianSpider(Spider):
 
     @classmethod
     def from_crawler(cls, crawler, *args, **kwargs):
+        """
+        Создает экземпляр драйвера с помощью undetected_chromedriver
+        и сохраняет его в атрибуте driver экземпляра паука
+        """
         spider = super(CianSpider, cls).from_crawler(crawler, *args, **kwargs)
         options = uc.ChromeOptions()
         options.add_argument("--headless")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--proxy-server=https://190.110.35.224:999")
+        options.add_argument('--log-level=3')   # Устанавливаем уровень логирования на 3 (ОШИБКА (ERROR))
         spider.driver = uc.Chrome(options=options)
         # driver = uc.Chrome(browser_executable_path="../chromedriver", options=options)
         return spider
 
     def start_requests(self):
+        """
+        Генерирует начальные запросы паука
+
+        Yields:
+            scrapy.Request
+        """
         for url in self.start_urls:
             yield scrapy.Request(url, callback=self.parse, meta={'current_url': url})
 
