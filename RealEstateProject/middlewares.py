@@ -4,6 +4,7 @@
 # https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
+from scrapy.exceptions import NotConfigured
 
 # useful for handling different item types with a single interface
 from itemadapter import is_item, ItemAdapter
@@ -16,7 +17,7 @@ class RealestateprojectSpiderMiddleware:
 
     @classmethod
     def from_crawler(cls, crawler):
-        # This method is used by Scrapy to create your spiders.
+        # This method is used by Scrapy to create your spiders
         s = cls()
         crawler.signals.connect(s.spider_opened, signal=signals.spider_opened)
         return s
@@ -100,4 +101,4 @@ class RealestateprojectDownloaderMiddleware:
         pass
 
     def spider_opened(self, spider):
-        spider.logger.info("Spider opened: %s" % spider.name)
+        spider.logger.info("[+] Spider opened: %s" % spider.name)

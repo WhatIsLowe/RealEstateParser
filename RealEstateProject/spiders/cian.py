@@ -12,14 +12,23 @@ from scrapy.exceptions import CloseSpider
 from selenium.common import NoSuchElementException
 from selenium.webdriver.common.by import By
 
-logging.basicConfig(level=logging.WARNING)
+# Telegram
+import os
+from telegram import Bot
+from telegram import InputFile
+import sqlite3
+
+#Env
+from dotenv import load_dotenv
+load_dotenv()
+
+# Устанавливаем уровень логирования для selenium на ERROR
+logging.basicConfig(level=logging.INFO)
+logging.getLogger('selenium').setLevel(logging.ERROR)
+
 
 class CianSpider(Spider):
     name = 'cian'
-    # custom_settings = {
-    #     'FEED_FORMAT': 'json',
-    #     'FEED_URI': 'cian.json'
-    # }
 
     start_urls = [
         "https://kazan.cian.ru/cat.php?deal_type=sale&engine_version=2&offer_type=flat&p=1&region=4777&room1=1"
@@ -64,7 +73,7 @@ class CianSpider(Spider):
         try:
             # Получаем номер текущей страницы
             page_number = int(current_url.split('&p=')[1].split('&')[0])
-            self.logger.warn(f"Обрабатываю страницу №{page_number}")
+            self.logger.warn(f"[+] Обрабатываю страницу №{page_number}")
         except IndexError:
             # Если номер страницы в адресе не найден => присваиваем 1
             page_number = 1
@@ -123,7 +132,7 @@ class CianSpider(Spider):
         :return:
         """
         # Открываем текущую страницу (страницу, на которой обнаружен контейнер с доп предложениями)
-        self.driver.get(current_url)
+        # self.driver.get(current_url)
 
         # Ждем загрузки страницы
         time.sleep(5)
@@ -143,10 +152,10 @@ class CianSpider(Spider):
                                                        '_93444fe79c--moreSuggestionsButtonContainer--h0z5t')
                 more_button.click()
                 time.sleep(5)
-            except:
+            except NoSuchElementException:
                 break
 
-        # Обновляем содержимое ответа Scrapy
+        # Обновляем содержимое ответа Scrapy (selenium)
         body = self.driver.page_source
         url = self.driver.current_url
         response = HtmlResponse(url=url, body=body, encoding='utf-8')
@@ -154,4 +163,45 @@ class CianSpider(Spider):
 
     def closed(self, reason):
         self.driver.quit()
-        logging.info(msg="Работа завершена")
+
+        try:
+            self.send_file_to_telegram()
+            self.logger.info("[+] Документ отправлен!")
+        except Exception as e:
+            self.logger.error(f'[-] Произошла ошибка при отправке файла в телеграм\nПричина: {e}')
+        finally:
+            self.logger.info(f"[=] Паук {self.name} завершил работу")
+
+    def load_chat_ids(self):
+        chat_ids = []
+        bd_path = os.getenv('BD_PATH')
+        conn = sqlite3.connect(bd_path)
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM subscribers")
+        chat_ids = cursor.fetchall()
+        conn.close()
+        return chat_ids
+
+    def send_file_to_telegram(self):
+        # Token бота телеграм
+        TOKEN = os.getenv('BOT_TOKEN')
+        CHAT_IDS = self.load_chat_ids()
+        folder_path = os.getenv('FOLDER_PATH')
+
+        # Находим самый новый CSV файл
+        files = os.listdir(folder_path)
+        # Составляем список файлов с расширением .csv
+        csv_files = [file for file in files if file.endswith('.csv')]
+        # Определяем самый новый файл
+        latest_file = max(csv_files, key=lambda file: 
+                        os.path.getctime(os.path.join(folder_path, file)))
+        # Записываем ссылку на обнаруженный файл
+        file_path = os.path.join(folder_path, latest_file)
+
+        # Отправляем файл в бота Telegram
+        bot = Bot(token=TOKEN)
+        with open(file_path, 'rb') as file:
+            for chat_id in CHAT_IDS:
+                bot.send_document(chat_id=chat_id, document=file, filename='out.csv')
+
+
