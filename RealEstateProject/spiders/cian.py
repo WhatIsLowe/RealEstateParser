@@ -10,7 +10,9 @@ from scrapy.http import HtmlResponse
 from scrapy.exceptions import CloseSpider
 
 from selenium.common import NoSuchElementException
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.proxy import Proxy, ProxyType
 
 # Telegram
 import os
@@ -48,10 +50,22 @@ class CianSpider(Spider):
         options = uc.ChromeOptions()
         options.add_argument("--headless")
         options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--proxy-server=https://190.110.35.224:999")
+        # options.add_argument("--proxy-server=https://190.110.35.224:999")
         options.add_argument('--log-level=3')   # Устанавливаем уровень логирования на 3 (ОШИБКА (ERROR))
-        spider.driver = uc.Chrome(options=options)
+        # spider.driver = uc.Chrome(options=options)
         # driver = uc.Chrome(browser_executable_path="../chromedriver", options=options)
+
+        # Настройка прокси-сервера
+        # proxy = Proxy()
+        # proxy.proxy_type = ProxyType.MANUAL
+        # proxy.http_proxy = "190.110.35.224:999"
+        # proxy.ssl_proxy = "190.110.35.224:999"
+
+        # capabilities = DesiredCapabilities.CHROME
+
+        # spider.driver = uc.Chrome(options=options, desired_capabilities=capabilities)
+        spider.driver = uc.Chrome(options=options)
+
         return spider
 
     def start_requests(self):
@@ -62,7 +76,7 @@ class CianSpider(Spider):
             scrapy.Request
         """
         for url in self.start_urls:
-            yield scrapy.Request(url, callback=self.parse, meta={'current_url': url})
+            yield scrapy.Request(url, callback=self.parse, meta={'current_url': url, 'proxy': 'http://dSkYJx:2w6QE0@213.139.222.69:8000'})
 
 
     def parse(self, response):
@@ -114,7 +128,7 @@ class CianSpider(Spider):
         # Переход на следующую страницу
         self.current_url = self.current_url.replace(f"p={page_number}", f"p={page_number + 1}")
         if self.current_url is not None:
-            yield response.follow(self.current_url, self.parse, meta={'current_url': self.current_url})
+            yield response.follow(self.current_url, self.parse, meta={'current_url': self.current_url, 'proxy': 'http://dSkYJx:2w6QE0@213.139.222.69:8000'})
 
     def extract_address(self, addr_div: Selector) -> str:
         """
@@ -200,8 +214,7 @@ class CianSpider(Spider):
 
         # Отправляем файл в бота Telegram
         bot = Bot(token=TOKEN)
-        with open(file_path, 'rb') as file:
-            for chat_id in CHAT_IDS:
+        for (chat_id,) in CHAT_IDS:
+            with open(file_path, 'rb') as file:
                 bot.send_document(chat_id=chat_id, document=file, filename='out.csv')
-
 
