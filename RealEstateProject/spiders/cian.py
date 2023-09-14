@@ -28,6 +28,9 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logging.getLogger('selenium').setLevel(logging.ERROR)
 
+#Proxy
+PROXY=os.getenv("PROXY")
+
 
 class CianSpider(Spider):
     name = 'cian'
@@ -50,7 +53,7 @@ class CianSpider(Spider):
         options = uc.ChromeOptions()
         options.add_argument("--headless")
         options.add_argument("--disable-dev-shm-usage")
-        # options.add_argument("--proxy-server=https://190.110.35.224:999")
+        # options.add_argument("--proxy-server=")
         options.add_argument('--log-level=3')   # Устанавливаем уровень логирования на 3 (ОШИБКА (ERROR))
         # spider.driver = uc.Chrome(options=options)
         # driver = uc.Chrome(browser_executable_path="../chromedriver", options=options)
@@ -58,8 +61,8 @@ class CianSpider(Spider):
         # Настройка прокси-сервера
         # proxy = Proxy()
         # proxy.proxy_type = ProxyType.MANUAL
-        # proxy.http_proxy = "190.110.35.224:999"
-        # proxy.ssl_proxy = "190.110.35.224:999"
+        # proxy.http_proxy = 
+        # proxy.ssl_proxy = 
 
         # capabilities = DesiredCapabilities.CHROME
 
@@ -76,7 +79,7 @@ class CianSpider(Spider):
             scrapy.Request
         """
         for url in self.start_urls:
-            yield scrapy.Request(url, callback=self.parse, meta={'current_url': url, 'proxy': 'http://dSkYJx:2w6QE0@213.139.222.69:8000'})
+            yield scrapy.Request(url, callback=self.parse, meta={'current_url': url, 'proxy': PROXY})
 
 
     def parse(self, response):
@@ -128,7 +131,7 @@ class CianSpider(Spider):
         # Переход на следующую страницу
         self.current_url = self.current_url.replace(f"p={page_number}", f"p={page_number + 1}")
         if self.current_url is not None:
-            yield response.follow(self.current_url, self.parse, meta={'current_url': self.current_url, 'proxy': 'http://dSkYJx:2w6QE0@213.139.222.69:8000'})
+            yield response.follow(self.current_url, self.parse, meta={'current_url': self.current_url, 'proxy': PROXY})
 
     def extract_address(self, addr_div: Selector) -> str:
         """
